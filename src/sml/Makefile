@@ -1,12 +1,12 @@
 TEST=rv64ui-p-add
 L3RISCV=/local/scratch/$(USER)/l3riscv
-ROCKET=/local/scratch/$(USER)/freedom/rocket-chip
+ROCKET=/local/scratch/$(USER)/lowrisc-chip-ethernet-v0.5
 RISCV=$(ROCKET)/riscv
 ROCKETLOG=$(L3RISCV)/src/sml/riscv_rocketlog
 export LD_LIBRARY_PATH=$(L3RISCV)
-SIM_ELF_TEST=$(ROCKET)/emulator/output/$(TEST)
-SIM_ELF_LOG=$(SIM_ELF_TEST).out
-export SIM_ELF_FILENAME=$(SIM_ELF_TEST)
+SIM_ELF_TEST=$(ROCKET)/vsim/output/$(TEST)
+SIM_ELF_LOG=$(SIM_ELF_TEST).verilator.out
+export SIM_ELF_FILENAME=$(SIM_ELF_TEST).riscv
 
 $(ROCKETLOG): $(ROCKETLOG).c
 	gcc -g $@.c -L../.. -ll3riscv -o $@

@@ -87,7 +87,7 @@ int main(int argc, char **argv)
 	    }
 	  if (ptr->found && ptr->found->op == op_ecall)
 	    ptr->valid = 1;
-          if (ptr->valid && (ptr->iaddr==0x80000000))
+          if (ptr->valid && (ptr->iaddr==0x40000000))
             checking = 1;
           if (checking && ptr->valid && ptr->found)
 	    {
@@ -120,9 +120,6 @@ int main(int argc, char **argv)
 	    {
 	    case op_jal:
 	    case op_jalr:
-	      addr = ptr[1].iaddr;
-	      data1 = ptr->rf_wdata;
-	      break;
 	    case op_uret:
 	    case op_sret:
 	    case op_mret:
@@ -142,7 +139,9 @@ int main(int argc, char **argv)
 	      switch(addr)
 		{
 		case CSR_MISA:
+		case 0xf10:
 		  data1 = (ptr->rf_wdata | (1<<20)) & ~0xFF;
+		  fprintf(stderr, "MISA=%lx\n", data1);
 		  break;
 		case CSR_MTVEC:
 		  data1 = 0x100;
