@@ -485,7 +485,7 @@ fun doInstrRetire (exc, pc, addr, d1, d2, d3, fpd, v) =
                  ; if pc_ok then ()
                    else verifierTrace (1, String.concat(["PC mis-match: ", hx64 (toW64 (#pc delta)), " vs ", hx64 pc]))
                  ; if inst_ok orelse (#fetch_exc delta) then ()
-                   else verifierTrace (0, "Instruction mis-match")
+                   else verifierTrace (1, String.concat(["Instruction mis-match: ", hx64 (toW64 (#rinstr delta)), " vs ", hx64 d3]))
                  ; if addr_ok then ()
                    else verifierTrace (1, String.concat(["Address mis-match: ", printOpt (#addr delta), " vs ", hx64 addr]))
                  ; if d1_ok then ()

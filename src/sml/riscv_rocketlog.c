@@ -39,12 +39,14 @@ typedef struct {
   encoding_t *found;
 } commit_t;
 
-commit_t instrns[1<<20];
+enum {lenmax=1<<20};
+
+commit_t *instrns;
 
 int main(int argc, char **argv)
 {
   int i, j, cnt = 0;
-  int checking = 0;
+  int lencrnt, checking = 0;
   char linbuf[256];
   uint64_t cpu = 0;
   uint32_t cmd = 0;
@@ -57,6 +59,7 @@ int main(int argc, char **argv)
   uint64_t fpdata = 0;
   uint32_t verbosity = 0;
   uint32_t rslt = 0;
+  uint64_t start = 0;
   const char *elf = getenv("SIM_ELF_FILENAME");
   FILE *fd = fopen("rocket.log","w");
   if (!elf)
@@ -67,6 +70,10 @@ int main(int argc, char **argv)
   l3riscv_init();
   
   l3riscv_mem_load_elf();
+  start = l3riscv_mem_get_min_addr();
+  
+  lencrnt = lenmax;
+  instrns = malloc(lencrnt*sizeof(commit_t));
   while (fgets(linbuf, sizeof(linbuf), stdin))
     {
       commit_t *ptr = instrns+cnt;
@@ -87,7 +94,7 @@ int main(int argc, char **argv)
 	    }
 	  if (ptr->found && ptr->found->op == op_ecall)
 	    ptr->valid = 1;
-          if (ptr->valid && (ptr->iaddr==0x40000000))
+          if (ptr->valid && (ptr->iaddr==start))
             checking = 1;
           if (checking && ptr->valid && ptr->found)
 	    {
@@ -98,7 +105,11 @@ int main(int argc, char **argv)
                     ptr->rs0, ptr->rs0_rdata,
                     ptr->rs1, ptr->rs1_rdata,
                     ptr->insn0, ptr->insn0, ptr->found->nam);
-	    cnt++;
+	    if (++cnt >= lencrnt)
+	      {
+	      lencrnt *= 2;
+	      instrns = realloc(instrns, lencrnt*sizeof(commit_t));
+	      }
 	    }
         }
     }
@@ -115,7 +126,7 @@ int main(int argc, char **argv)
           data3 = ptr->insn0;
           fpdata = 0;
           verbosity = 0;
-	  addr = 0;
+	  addr = ptr->iaddr+4;
 	  switch(ptr->found->op)
 	    {
 	    case op_jal:
@@ -162,17 +173,24 @@ int main(int argc, char **argv)
 	      exc_taken = 1;
 	      break;
 	    case op_sw:
+	    case op_sd:
 	      data1 = ptr->rs0_rdata;
 	      data2 = ptr->rs1_rdata;
 	      addr = ptr->rf_wdata;
+	      break;
+	    case op_lw:
+	    case op_ld:
+	      addr = ptr->rs0_rdata;
+	      data1 = ptr[1].rs1_rdata;
 	      break;
 	    default:
 	      break;
 	    }
           
-	  printf("op = %s(%d)\n", ptr->found->nam, ptr->found->op);
-	  
-          rslt = l3riscv_verify(cpu,
+	  for (j = 0; j < (ptr->found->op == op_auipc && ptr->iaddr == start ? 2 : 1); j++) // hack alert
+	    {
+	      fprintf(stderr, "op[%ld] => %s(%d)\n", ptr->time, ptr->found->nam, ptr->found->op);
+	      rslt = l3riscv_verify(cpu,
 				cmd,
 				exc_taken,
 				pc,
@@ -182,6 +200,7 @@ int main(int argc, char **argv)
 				data3,
 				fpdata,
 				verbosity);
+	    }
         }
   l3riscv_done();
 }

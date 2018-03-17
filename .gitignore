@@ -9,4 +9,5 @@ src/sml/riscv_ffi.h
 src/sml/riscv_rocketlog
 src/sml/rocket.dis
 src/sml/rocket.log
+src/sml/dis.log
 src/sml/test.log
