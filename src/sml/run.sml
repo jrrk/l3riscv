@@ -441,6 +441,11 @@ fun doInstrRetire (exc, pc, addr, d1, d2, d3, fpd, v) =
         fun checkOpt ot v   = case ot of
                                   SOME b => eqW64 (toW64 b) v
                                 | NONE   => true
+        fun printOpt ot     = case ot of
+                                  SOME b => hx64 (toW64 b)
+                                | NONE   => "NONE"
+        fun printLogic b    = if b <> 0x0 then "true" else if b = 0x0 then "false" else "undecidable"
+        fun printBool b     = if b then "true" else "false"
         fun checkSubOpt optval optwidth v =
             case (optval, optwidth) of
                 (NONE, _)           => true
@@ -476,17 +481,17 @@ fun doInstrRetire (exc, pc, addr, d1, d2, d3, fpd, v) =
                            andalso d1_ok andalso d2_ok andalso fp_ok)
         in  if all_ok then 0
             else ( if exc_ok then ()
-                   else verifierTrace (0, "Exception mis-match")
+                   else verifierTrace (1, String.concat(["Exception mis-match: ", printBool (#exc_taken delta), " vs ", printLogic exc]))
                  ; if pc_ok then ()
-                   else verifierTrace (0, "PC mis-match")
+                   else verifierTrace (1, String.concat(["PC mis-match: ", hx64 (toW64 (#pc delta)), " vs ", hx64 pc]))
                  ; if inst_ok orelse (#fetch_exc delta) then ()
                    else verifierTrace (0, "Instruction mis-match")
                  ; if addr_ok then ()
-                   else verifierTrace (0, "Address mis-match")
+                   else verifierTrace (1, String.concat(["Address mis-match: ", printOpt (#addr delta), " vs ", hx64 addr]))
                  ; if d1_ok then ()
-                   else verifierTrace (0, "Data1 mis-match")
+                   else verifierTrace (1, String.concat(["Data1 mis-match: ", printOpt (#data1 delta), " vs ", hx64 d1]))
                  ; if d2_ok then ()
-                   else verifierTrace (0, "Data2 mis-match")
+                   else verifierTrace (1, String.concat(["Data2 mis-match: ", printOpt (#data2 delta), " vs ", hx64 d2]))
                  ; if fp_ok then ()
                    else verifierTrace (0, "FP mis-match")
                  ; dumpRegisters (currentCore ())

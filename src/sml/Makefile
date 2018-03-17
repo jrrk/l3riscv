@@ -1,16 +1,18 @@
-TEST=rv64um-v-mul
+TEST=rv64ui-p-add
 L3RISCV=/local/scratch/$(USER)/l3riscv
-ROCKET=/local/scratch/$(USER)/rocket-chip
+ROCKET=/local/scratch/$(USER)/freedom/rocket-chip
 RISCV=$(ROCKET)/riscv
 ROCKETLOG=$(L3RISCV)/src/sml/riscv_rocketlog
 export LD_LIBRARY_PATH=$(L3RISCV)
-export SIM_ELF_FILENAME=$(ROCKET)/emulator/output/$(TEST)
+SIM_ELF_TEST=$(ROCKET)/emulator/output/$(TEST)
+SIM_ELF_LOG=$(SIM_ELF_TEST).out
+export SIM_ELF_FILENAME=$(SIM_ELF_TEST)
 
 $(ROCKETLOG): $(ROCKETLOG).c
-	gcc $@.c -L../.. -ll3riscv -o $@
+	gcc -g $@.c -L../.. -ll3riscv -o $@
 
-test: $(ROCKETLOG)
-	$(ROCKETLOG) < $(SIM_ELF_FILENAME).out |& $(RISCV)/bin/spike-dasm |& tee test.log
+test: $(ROCKETLOG) $(SIM_ELF_FILENAME) $(SIM_ELF_LOG)
+	$(ROCKETLOG) < $(SIM_ELF_LOG) |& $(RISCV)/bin/spike-dasm |& tee test.log
 
 ref:
 	$(L3RISCV)/l3riscv --trace 1 $(SIM_ELF_FILENAME)
