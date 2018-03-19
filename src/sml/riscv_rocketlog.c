@@ -60,13 +60,16 @@ int main(int argc, char **argv)
   uint32_t verbosity = 0;
   uint32_t rslt = 0;
   uint64_t start = 0;
+  char lognam[99];
   const char *elf = getenv("SIM_ELF_FILENAME");
-  FILE *fd = fopen("rocket.log","w");
+  FILE *fd;
   if (!elf)
     {
     fprintf(stderr, "SIM_ELF_FILENAME is not defined\n");
     exit(1);
     }
+  sprintf(lognam, "%s_filt.log", elf);
+  fd = fopen(lognam, "w");
   l3riscv_init();
   
   l3riscv_mem_load_elf();
@@ -96,7 +99,9 @@ int main(int argc, char **argv)
 	    ptr->valid = 1;
           if (ptr->valid && (ptr->iaddr==start))
             checking = 1;
-          if (checking && ptr->valid && ptr->found)
+          if (cnt && !instrns[cnt-1].valid && (instrns[cnt-1].iaddr == ptr->iaddr))
+            instrns[cnt-1] = *ptr;
+          else if (checking && ptr->found)
 	    {
             fprintf(fd, "C%ld: %ld [%ld] pc=[%lx] W[r%ld=%lx][%ld] R[r%ld=%lx] R[r%ld=%lx] inst=[%lx] DASM(%lx) %s\n",
                     ptr->hartid, ptr->time, ptr->valid,
@@ -129,7 +134,26 @@ int main(int argc, char **argv)
 	  addr = ptr->iaddr+4;
 	  switch(ptr->found->op)
 	    {
+	    case op_mul:
+	    case op_mulh:
+	    case op_mulhu:
+	    case op_mulhsu:
+	    case op_mulw:
+	    case op_div:
+	    case op_divu:
+	    case op_divuw:
+	    case op_divw:
+	    case op_rem:
+	    case op_remu:
+	    case op_remuw:
+	    case op_remw:
+	      data1 = ptr[1].rf_wdata;
+	      break;
 	    case op_jal:
+	      addr = ptr->insn0 >> 12;
+              addr = ptr->iaddr + ((((addr >> 9)&1023)<<1) | (((addr >> 8)&1)<<11) | ((addr&255)<<12) | ((addr >> 19)&1 ? (-1<<20) : 0));
+	      data1 = ptr->rf_wdata;
+	      break;
 	    case op_jalr:
 	    case op_uret:
 	    case op_sret:
@@ -152,13 +176,18 @@ int main(int argc, char **argv)
 		case CSR_MISA:
 		case 0xf10:
 		  data1 = (ptr->rf_wdata | (1<<20)) & ~0xFF;
-		  fprintf(stderr, "MISA=%lx\n", data1);
+		  printf("**TRACE:MISA=%lx\n", data1);
+                  fflush(stdout);
+		  break;
+		case CSR_STVEC:
+		  data1 = 0x0;
 		  break;
 		case CSR_MTVEC:
 		  data1 = 0x100;
 		  break;
 		case CSR_MSTATUS:
 		  data1 = 0x2000;
+		  data2 |= 0x2000;
 		  break;
 		case CSR_MEPC:
 		  data1 = 0x0;
@@ -172,16 +201,23 @@ int main(int argc, char **argv)
 	      addr = ptr[1].iaddr;
 	      exc_taken = 1;
 	      break;
-	    case op_sw:
+	    case op_sb:
 	    case op_sd:
+	    case op_sh:
+	    case op_sw:
 	      data1 = ptr->rs0_rdata;
 	      data2 = ptr->rs1_rdata;
 	      addr = ptr->rf_wdata;
 	      break;
-	    case op_lw:
+	    case op_lb:
+	    case op_lbu:
 	    case op_ld:
+	    case op_lh:
+	    case op_lhu:
+	    case op_lw:
+	    case op_lwu:
 	      addr = ptr->rs0_rdata;
-	      data1 = ptr[1].rs1_rdata;
+	      data1 = ptr[1].rf_wdata;
 	      break;
 	    default:
 	      break;
@@ -189,7 +225,8 @@ int main(int argc, char **argv)
           
 	  for (j = 0; j < (ptr->found->op == op_auipc && ptr->iaddr == start ? 2 : 1); j++) // hack alert
 	    {
-	      fprintf(stderr, "op[%ld] => %s(%d)\n", ptr->time, ptr->found->nam, ptr->found->op);
+	      printf("**TRACE:op[%ld] => %s(%d)\n", ptr->time, ptr->found->nam, ptr->found->op);
+              fflush(stdout);
 	      rslt = l3riscv_verify(cpu,
 				cmd,
 				exc_taken,
@@ -202,5 +239,6 @@ int main(int argc, char **argv)
 				verbosity);
 	    }
         }
+  fprintf(stderr, "Normal end of execution logfile\n");
   l3riscv_done();
 }

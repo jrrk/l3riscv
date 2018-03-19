@@ -1,27 +1,449 @@
 ROOT=/local/scratch/$(USER)
 #TEST=rv64ui-p-add
-TEST=vm
+#TEST=vm
+#TEST=rv64um-v-mul
+#TEST=rv64mi-p-ma_addr
+TEST=rv64ui-p-simple
 L3RISCV=$(ROOT)/l3riscv
-#ROCKET=$(ROOT)/lowrisc-chip-ethernet-v0.5
-ROCKET=$(ROOT)/freedom/rocket-chip
+#ROCKET=$(ROOT)/rocket-chip
+#ROCKET=$(ROOT)/freedom/rocket-chip
+ROCKET=$(ROOT)/lowrisc-chip
 RISCV=$(ROCKET)/riscv
 ROCKETLOG=$(L3RISCV)/src/sml/riscv_rocketlog
 export LD_LIBRARY_PATH=$(L3RISCV)
-SIM_ELF_TEST=$(ROOT)/riscv-test-env/v/$(TEST)
-SIM_ELF_LOG=$(SIM_ELF_TEST).log
-export SIM_ELF_FILENAME=$(SIM_ELF_TEST)
+#SIM_ELF_DIR=$(ROOT)/riscv-test-env/v
+SIM_ELF_DIR=$(ROCKET)/vsim/output
+#SIM_ELF_LOG=$(SIM_ELF_DIR)/$(TEST).log
+SIM_ELF_LOG=$(SIM_ELF_DIR)/$(TEST).verilator.out
+export SIM_ELF_FILENAME=$(SIM_ELF_DIR)/$(TEST).riscv
+
+test: $(ROCKETLOG) $(SIM_ELF_FILENAME) $(SIM_ELF_LOG)
+	$(ROCKETLOG) < $(SIM_ELF_LOG) >$(TEST).log
+
+ref: $(SIM_ELF_FILENAME)
+	$(L3RISCV)/l3riscv --trace 1 $(SIM_ELF_FILENAME) >$(TEST).ref
+
+dis: $(SIM_ELF_FILENAME)
+	$(L3RISCV)/l3riscv --dis true $(SIM_ELF_FILENAME) >$(TEST).l3
+
+log: $(TEST).log
+	$(RISCV)/bin/spike-dasm < $(TEST).log > $(TEST).dis
+
+obj: $(SIM_ELF_FILENAME)
+	$(RISCV)/bin/riscv64-unknown-elf-objdump -d $(SIM_ELF_FILENAME) > $(TEST).obj
 
 $(ROCKETLOG): $(ROCKETLOG).c
 	gcc -g $@.c -L../.. -ll3riscv -o $@
 
-test: $(ROCKETLOG) $(SIM_ELF_FILENAME) $(SIM_ELF_LOG)
-	$(ROCKETLOG) < $(SIM_ELF_LOG) |& $(RISCV)/bin/spike-dasm |& tee test.log
+#../../../lowrisc-chip/vsim/riscv-tests/isa/rv64mi-p-sbreak \
+../../../lowrisc-chip/vsim/riscv-tests/isa/rv64si-p-sbreak \
 
-ref:
-	$(L3RISCV)/l3riscv --trace 1 $(SIM_ELF_FILENAME)
+USE1 = \
+rv64mi-p-csr \
+rv64mi-p-dirty \
+rv64mi-p-illegal \
+rv64mi-p-ma_addr \
+rv64mi-p-ma_fetch \
+rv64mi-p-mcsr \
+rv64mi-p-scall \
+rv64si-p-csr \
+rv64si-p-hpm \
+rv64si-p-ma_fetch \
+rv64si-p-scall \
+rv64si-p-wfi \
+rv64ui-p-add \
+rv64ui-p-addi \
+rv64ui-p-addiw \
+rv64ui-p-addw \
+rv64ui-p-amoadd_d \
+rv64ui-p-amoand_d \
+rv64ui-p-amomax_d \
+rv64ui-p-amomaxu_d \
+rv64ui-p-amomin_d \
+rv64ui-p-amominu_d \
+rv64ui-p-amoor_d \
+rv64ui-p-amoswap_d \
+rv64ui-p-amoxor_d \
+rv64ui-p-and \
+rv64ui-p-andi \
+rv64ui-p-auipc \
+rv64ui-p-beq \
+rv64ui-p-bge \
+rv64ui-p-bgeu \
+rv64ui-p-blt \
+rv64ui-p-bltu \
+rv64ui-p-bne \
+rv64ui-p-div \
+rv64ui-p-divu \
+rv64ui-p-divuw \
+rv64ui-p-divw \
+rv64ui-p-fence_i \
+rv64ui-p-j \
+rv64ui-p-jal \
+rv64ui-p-jalr \
+rv64ui-p-lb \
+rv64ui-p-lbu \
+rv64ui-p-ld \
+rv64ui-p-lh \
+rv64ui-p-lhu \
+rv64ui-p-lui \
+rv64ui-p-lw \
+rv64ui-p-lwu \
+rv64ui-p-mul \
+rv64ui-p-mulh \
+rv64ui-p-mulhsu \
+rv64ui-p-mulhu \
+rv64ui-p-mulw \
+rv64ui-p-or \
+rv64ui-p-ori \
+rv64ui-p-rem \
+rv64ui-p-remu \
+rv64ui-p-remuw \
+rv64ui-p-remw \
+rv64ui-p-sb \
+rv64ui-p-sd \
+rv64ui-p-sh \
+rv64ui-p-simple \
+rv64ui-p-sll \
+rv64ui-p-slli \
+rv64ui-p-slliw \
+rv64ui-p-sllw \
+rv64ui-p-slt \
+rv64ui-p-slti \
+rv64ui-p-sltiu \
+rv64ui-p-sltu \
+rv64ui-p-sra \
+rv64ui-p-srai \
+rv64ui-p-sraiw \
+rv64ui-p-sraw \
+rv64ui-p-srl \
+rv64ui-p-srli \
+rv64ui-p-srliw \
+rv64ui-p-srlw \
+rv64ui-p-sub \
+rv64ui-p-subw \
+rv64ui-p-sw \
+rv64ui-p-xor \
+rv64ui-p-xori \
+rv64ui-v-add \
+rv64ui-v-addi \
+rv64ui-v-addiw \
+rv64ui-v-addw \
+rv64ui-v-amoadd_d \
+rv64ui-v-amoand_d \
+rv64ui-v-amomax_d \
+rv64ui-v-amomaxu_d \
+rv64ui-v-amomin_d \
+rv64ui-v-amominu_d \
+rv64ui-v-amoor_d \
+rv64ui-v-amoswap_d \
+rv64ui-v-amoxor_d \
+rv64ui-v-and \
+rv64ui-v-andi \
+rv64ui-v-auipc \
+rv64ui-v-beq \
+rv64ui-v-bge \
+rv64ui-v-bgeu \
+rv64ui-v-blt \
+rv64ui-v-bltu \
+rv64ui-v-bne \
+rv64ui-v-div \
+rv64ui-v-divu \
+rv64ui-v-divuw \
+rv64ui-v-divw \
+rv64ui-v-fence_i \
+rv64ui-v-j \
+rv64ui-v-jal \
+rv64ui-v-jalr \
+rv64ui-v-lb \
+rv64ui-v-lbu \
+rv64ui-v-ld \
+rv64ui-v-lh \
+rv64ui-v-lhu \
+rv64ui-v-lui \
+rv64ui-v-lw \
+rv64ui-v-lwu \
+rv64ui-v-mul \
+rv64ui-v-mulh \
+rv64ui-v-mulhsu \
+rv64ui-v-mulhu \
+rv64ui-v-mulw \
+rv64ui-v-or \
+rv64ui-v-ori \
+rv64ui-v-rem \
+rv64ui-v-remu \
+rv64ui-v-remuw \
+rv64ui-v-remw \
+rv64ui-v-sb \
+rv64ui-v-sd \
+rv64ui-v-sh \
+rv64ui-v-simple \
+rv64ui-v-sll \
+rv64ui-v-slli \
+rv64ui-v-slliw \
+rv64ui-v-sllw \
+rv64ui-v-slt \
+rv64ui-v-slti \
+rv64ui-v-sltiu \
+rv64ui-v-sltu \
+rv64ui-v-sra \
+rv64ui-v-srai \
+rv64ui-v-sraiw \
+rv64ui-v-sraw \
+rv64ui-v-srl \
+rv64ui-v-srli \
+rv64ui-v-srliw \
+rv64ui-v-srlw \
+rv64ui-v-sub \
+rv64ui-v-subw \
+rv64ui-v-sw \
+rv64ui-v-xor \
+rv64ui-v-xori \
 
-dis:
-	$(L3RISCV)/l3riscv --dis true $(SIM_ELF_FILENAME)
+FAIL1= \
+rv64mi-p-csr \
+rv64mi-p-dirty \
+rv64mi-p-illegal \
+rv64mi-p-ma_addr \
+rv64mi-p-ma_fetch \
+rv64mi-p-mcsr \
+rv64mi-p-scall \
+rv64si-p-csr \
+rv64si-p-hpm \
+rv64si-p-ma_fetch \
+rv64si-p-scall \
+rv64si-p-wfi \
+rv64ui-p-amoadd_d \
+rv64ui-p-amoand_d \
+rv64ui-p-amomax_d \
+rv64ui-p-amomaxu_d \
+rv64ui-p-amomin_d \
+rv64ui-p-amominu_d \
+rv64ui-p-amoor_d \
+rv64ui-p-amoswap_d \
+rv64ui-p-amoxor_d \
+rv64ui-p-div \
+rv64ui-p-divu \
+rv64ui-p-divuw \
+rv64ui-p-divw \
+rv64ui-p-fence_i \
+rv64ui-p-lb \
+rv64ui-p-lbu \
+rv64ui-p-ld \
+rv64ui-p-lh \
+rv64ui-p-lhu \
+rv64ui-p-lw \
+rv64ui-p-lwu \
+rv64ui-p-mul \
+rv64ui-p-mulh \
+rv64ui-p-mulhsu \
+rv64ui-p-mulhu \
+rv64ui-p-mulw \
+rv64ui-p-rem \
+rv64ui-p-remu \
+rv64ui-p-remuw \
+rv64ui-p-remw \
+rv64ui-p-sb \
+rv64ui-p-sd \
+rv64ui-p-sh \
+rv64ui-p-sw \
+rv64ui-v-add \
+rv64ui-v-addi \
+rv64ui-v-addiw \
+rv64ui-v-addw \
+rv64ui-v-amoadd_d \
+rv64ui-v-amoand_d \
+rv64ui-v-amomax_d \
+rv64ui-v-amomaxu_d \
+rv64ui-v-amomin_d \
+rv64ui-v-amominu_d \
+rv64ui-v-amoor_d \
+rv64ui-v-amoswap_d \
+rv64ui-v-amoxor_d \
+rv64ui-v-and \
+rv64ui-v-andi \
+rv64ui-v-auipc \
+rv64ui-v-beq \
+rv64ui-v-bge \
+rv64ui-v-bgeu \
+rv64ui-v-blt \
+rv64ui-v-bltu \
+rv64ui-v-bne \
+rv64ui-v-div \
+rv64ui-v-divu \
+rv64ui-v-divuw \
+rv64ui-v-divw \
+rv64ui-v-fence_i \
+rv64ui-v-j \
+rv64ui-v-jal \
+rv64ui-v-jalr \
+rv64ui-v-lb \
+rv64ui-v-lbu \
+rv64ui-v-ld \
+rv64ui-v-lh \
+rv64ui-v-lhu \
+rv64ui-v-lui \
+rv64ui-v-lw \
+rv64ui-v-lwu \
+rv64ui-v-mul \
+rv64ui-v-mulh \
+rv64ui-v-mulhsu \
+rv64ui-v-mulhu \
+rv64ui-v-mulw \
+rv64ui-v-or \
+rv64ui-v-ori \
+rv64ui-v-rem \
+rv64ui-v-remu \
+rv64ui-v-remuw \
+rv64ui-v-remw \
+rv64ui-v-sb \
+rv64ui-v-sd \
+rv64ui-v-sh \
+rv64ui-v-simple \
+rv64ui-v-sll \
+rv64ui-v-slli \
+rv64ui-v-slliw \
+rv64ui-v-sllw \
+rv64ui-v-slt \
+rv64ui-v-slti \
+rv64ui-v-sltiu \
+rv64ui-v-sltu \
+rv64ui-v-sra \
+rv64ui-v-srai \
+rv64ui-v-sraiw \
+rv64ui-v-sraw \
+rv64ui-v-srl \
+rv64ui-v-srli \
+rv64ui-v-srliw \
+rv64ui-v-srlw \
+rv64ui-v-sub \
+rv64ui-v-subw \
+rv64ui-v-sw \
+rv64ui-v-xor \
+rv64ui-v-xori \
 
-log:
-	$(RISCV)/bin/spike-dasm < rocket.log > rocket.dis
+FAIL2 = \
+rv64mi-p-csr \
+rv64mi-p-dirty \
+rv64mi-p-illegal \
+rv64mi-p-ma_addr \
+rv64mi-p-ma_fetch \
+rv64mi-p-mcsr \
+rv64mi-p-scall \
+rv64si-p-csr \
+rv64si-p-hpm \
+rv64si-p-ma_fetch \
+rv64si-p-scall \
+rv64si-p-wfi \
+rv64ui-p-amoadd_d \
+rv64ui-p-amoand_d \
+rv64ui-p-amomax_d \
+rv64ui-p-amomaxu_d \
+rv64ui-p-amomin_d \
+rv64ui-p-amominu_d \
+rv64ui-p-amoor_d \
+rv64ui-p-amoswap_d \
+rv64ui-p-amoxor_d \
+rv64ui-p-div \
+rv64ui-p-divu \
+rv64ui-p-divuw \
+rv64ui-p-divw \
+rv64ui-p-fence_i \
+rv64ui-p-lb \
+rv64ui-p-lbu \
+rv64ui-p-ld \
+rv64ui-p-lh \
+rv64ui-p-lhu \
+rv64ui-p-lw \
+rv64ui-p-lwu \
+rv64ui-p-mul \
+rv64ui-p-mulh \
+rv64ui-p-mulhsu \
+rv64ui-p-mulhu \
+rv64ui-p-mulw \
+rv64ui-p-rem \
+rv64ui-p-remu \
+rv64ui-p-remuw \
+rv64ui-p-remw \
+rv64ui-p-sb \
+rv64ui-p-sd \
+rv64ui-p-sh \
+rv64ui-p-sw \
+rv64ui-v-add \
+rv64ui-v-addi \
+rv64ui-v-addiw \
+rv64ui-v-addw \
+rv64ui-v-amoadd_d \
+rv64ui-v-amoand_d \
+rv64ui-v-amomax_d \
+rv64ui-v-amomaxu_d \
+rv64ui-v-amomin_d \
+rv64ui-v-amominu_d \
+rv64ui-v-amoor_d \
+rv64ui-v-amoswap_d \
+rv64ui-v-amoxor_d \
+rv64ui-v-and \
+rv64ui-v-andi \
+rv64ui-v-auipc \
+rv64ui-v-beq \
+rv64ui-v-bge \
+rv64ui-v-bgeu \
+rv64ui-v-blt \
+rv64ui-v-bltu \
+rv64ui-v-bne \
+rv64ui-v-div \
+rv64ui-v-divu \
+rv64ui-v-divuw \
+rv64ui-v-divw \
+rv64ui-v-fence_i \
+rv64ui-v-j \
+rv64ui-v-jal \
+rv64ui-v-jalr \
+rv64ui-v-lb \
+rv64ui-v-lbu \
+rv64ui-v-ld \
+rv64ui-v-lh \
+rv64ui-v-lhu \
+rv64ui-v-lui \
+rv64ui-v-lw \
+rv64ui-v-lwu \
+rv64ui-v-mul \
+rv64ui-v-mulh \
+rv64ui-v-mulhsu \
+rv64ui-v-mulhu \
+rv64ui-v-mulw \
+rv64ui-v-or \
+rv64ui-v-ori \
+rv64ui-v-rem \
+rv64ui-v-remu \
+rv64ui-v-remuw \
+rv64ui-v-remw \
+rv64ui-v-sb \
+rv64ui-v-sd \
+rv64ui-v-sh \
+rv64ui-v-simple \
+rv64ui-v-sll \
+rv64ui-v-slli \
+rv64ui-v-slliw \
+rv64ui-v-sllw \
+rv64ui-v-slt \
+rv64ui-v-slti \
+rv64ui-v-sltiu \
+rv64ui-v-sltu \
+rv64ui-v-sra \
+rv64ui-v-srai \
+rv64ui-v-sraiw \
+rv64ui-v-sraw \
+rv64ui-v-srl \
+rv64ui-v-srli \
+rv64ui-v-srliw \
+rv64ui-v-srlw \
+rv64ui-v-sub \
+rv64ui-v-subw \
+rv64ui-v-sw \
+rv64ui-v-xor \
+rv64ui-v-xori \
+
+scan:
+	rm -f failures
+	for i in $(FAIL2); do make obj dis test TEST=$$i || echo $$i >> failures; done
