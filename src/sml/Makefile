@@ -369,6 +369,8 @@ rv64ui-p-sb \
 rv64ui-p-sd \
 rv64ui-p-sh \
 rv64ui-p-sw \
+
+VIRT = \
 rv64ui-v-add \
 rv64ui-v-addi \
 rv64ui-v-addiw \
