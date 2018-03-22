@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -41,11 +42,23 @@ typedef struct {
 
 enum {lenmax=1<<20};
 
-typedef enum {fmt_unknown, fmt_R, fmt_I, fmt_S, fmt_SB, fmt_U, fmt_UJ} fmt_t;
+#define DECLARE_FMT(nam) fmt_##nam,
+typedef enum {
+#include "format.h"
+} fmt_t;
+#undef DECLARE_FMT
+
+#define DECLARE_FMT(nam) #nam,
+const char *fmtnam[] = {
+#include "format.h"
+};
+#undef DECLARE_FMT
 
 static int cnt = 0;
+static int lencrnt = 0;
 static commit_t *instrns;
-
+static uint64_t regs[32];
+static uint64_t csr_table[4095];
 static fmt_t get_fmt(opcode_t op)
 {
   fmt_t fmt = fmt_unknown;
@@ -73,6 +86,8 @@ static fmt_t get_fmt(opcode_t op)
     case op_uret:
     case op_sret:
     case op_mret:
+    case op_fence:
+      fmt = fmt_PRIV;
       break;
     case op_beq:
     case op_bne:
@@ -82,9 +97,10 @@ static fmt_t get_fmt(opcode_t op)
     case op_bgeu:
       fmt = fmt_SB;
       break;
+    case op_csrrc:
     case op_csrrw:
     case op_csrrs:
-      fmt = fmt_R;
+      fmt = fmt_I;
       break;
     case op_csrrwi:
       fmt = fmt_I;
@@ -138,10 +154,22 @@ static fmt_t get_fmt(opcode_t op)
       fmt = fmt_U;
       break;
     default:
-      fprintf(stderr, "Unhandled instruction %s\n", encodings[op].nam);
+      fprintf(stderr, "Unhandled instruction %s at line %d\n", encodings[op].nam, __LINE__);
       abort();
     }
   return fmt;
+}
+
+static encoding_t *find(uint64_t insn0)
+{
+  int j;
+  encoding_t *found = NULL;
+  for (j = 0; j < sizeof(encodings)/sizeof(*encodings); j++)
+    {
+      if ((insn0 & encodings[j].mask) == encodings[j].match)
+        found = encodings+j;
+    }
+  return found;
 }
 
 static void dump_log(FILE *fd, commit_t *ptr)
@@ -153,6 +181,11 @@ static void dump_log(FILE *fd, commit_t *ptr)
                     ptr->rs1, ptr->rs1_rdata,
                     ptr->rs2, ptr->rs2_rdata,
                     ptr->insn0, ptr->insn0, ptr->found->nam);
+  if (++cnt >= lencrnt)
+    {
+      lencrnt *= 2;
+      instrns = realloc(instrns, lencrnt*sizeof(commit_t));
+    }
 }
 
 static uint64_t lookahead(int offset, int reg)
@@ -176,7 +209,7 @@ static uint64_t lookahead(int offset, int reg)
         case fmt_UJ:
           break;
         default:
-          fprintf(stderr, "Invalid format %d\n", fmt);
+          fprintf(stderr, "Invalid format %d at line %d\n", fmt, __LINE__);
           abort();
         }
       switch(fmt)
@@ -188,10 +221,10 @@ static uint64_t lookahead(int offset, int reg)
         case fmt_R:
         case fmt_U:
         case fmt_UJ:
-          if (instrns[i].w_reg == reg) return 0xDEADBEEF;
+          if (instrns[i].w_reg == reg) return regs[reg]; // This default may or may not make sense
           break;
         default:
-          fprintf(stderr, "Invalid format %d\n", fmt);
+          fprintf(stderr, "Invalid format %d at line %d\n", fmt, __LINE__);
           abort();
         }
       ++i;
@@ -202,7 +235,7 @@ static uint64_t lookahead(int offset, int reg)
 int main(int argc, char **argv)
 {
   int i, j;
-  int lencrnt, checking = 0;
+  int checking = 0;
   char linbuf[256];
   uint64_t cpu = 0;
   uint32_t cmd = 0;
@@ -218,13 +251,15 @@ int main(int argc, char **argv)
   uint64_t start = 0;
   char lognam[99];
   const char *elf = getenv("SIM_ELF_FILENAME");
+  const char *basename = strrchr(elf, '/');
+  const char *stem = basename ? basename+1 : elf;
   FILE *fd;
   if (!elf)
     {
     fprintf(stderr, "SIM_ELF_FILENAME is not defined\n");
     exit(1);
     }
-  sprintf(lognam, "%s_filt.log", elf);
+  sprintf(lognam, "%s_filt.log", stem);
   fd = fopen(lognam, "w");
   l3riscv_init();
   
@@ -251,12 +286,7 @@ int main(int argc, char **argv)
 			&(ptr->insn0));
       if (args == 12)
         {
-	  ptr->found = NULL;
-	  for (j = 0; j < sizeof(encodings)/sizeof(*encodings); j++)
-	    {
-	      if ((ptr->insn0 & encodings[j].mask) == encodings[j].match)
-		ptr->found = encodings+j;
-	    }
+	  ptr->found = find(ptr->insn0);
 	  if (ptr->found && ptr->found->op == op_ecall)
 	    ptr->valid = 1;
           if (ptr->valid && (ptr->iaddr==start))
@@ -264,14 +294,7 @@ int main(int argc, char **argv)
           if (cnt && !instrns[cnt-1].valid && (instrns[cnt-1].iaddr == ptr->iaddr))
             instrns[cnt-1] = *ptr;
           else if (checking && ptr->found)
-	    {
               dump_log(fd, ptr);
-              if (++cnt >= lencrnt)
-	      {
-	      lencrnt *= 2;
-	      instrns = realloc(instrns, lencrnt*sizeof(commit_t));
-	      }
-	    }
         }
       else
         {
@@ -317,31 +340,59 @@ int main(int argc, char **argv)
                         );
           if (args == 25)
             {
-              ptr->found = NULL;
-              for (j = 0; j < sizeof(encodings)/sizeof(*encodings); j++)
-                {
-                  if ((ptr->insn0 & encodings[j].mask) == encodings[j].match)
-                    ptr->found = encodings+j;
-                }
+              ptr->found = find(ptr->insn0);
               ptr->valid = 1;
               checking = 1;
               if (checking && ptr->found)
-                {
-                  dump_log(fd, ptr);
-                  if (++cnt >= lencrnt)
-                  {
-                  lencrnt *= 2;
-                  instrns = realloc(instrns, lencrnt*sizeof(commit_t));
-                  }
-                }
+                dump_log(fd, ptr);
+            }
+          else if (args == 5)
+            {
+              ptr->found = find(ptr->insn0);
+              ptr->valid = 1;
+              checking = 1;
+              if (checking && ptr->found)
+                dump_log(fd, ptr);
             }
         }
     }
   fclose(fd);
+  csr_table[CSR_MISA] = 0;
+  csr_table[0xf10] = 0;
+  csr_table[CSR_STVEC] = 0;
+  csr_table[CSR_MTVEC] = 0x100;
+  csr_table[CSR_MSTATUS] = 0x2000;
+  csr_table[CSR_MEPC] = 0;
   for (i = 0; i < cnt; i++)
         {
           commit_t *ptr = instrns+i;
-          int rd = (ptr->insn0 >> 7)&31;
+          int reg1 = 0, reg2 = 0, rd = 0;
+          fmt_t fmt = get_fmt(ptr->found->op);
+          int32_t imm = (int32_t)(ptr->insn0) >> 20;
+          switch(fmt)
+            {
+            case fmt_S:
+            case fmt_SB:
+              imm = (imm & -32) | ((ptr->insn0 >> 7)&31);
+            case fmt_R:
+              reg2 = (ptr->insn0 >> 20)&31;
+            case fmt_I:
+            case fmt_PRIV:
+              reg1 = (ptr->insn0 >> 15)&31;
+            case fmt_U:
+            case fmt_UJ:
+              rd = (ptr->insn0 >> 7)&31;
+              break;
+            default:
+              fprintf(stderr, "Invalid format %d for instruction %s at line %d\n", fmt, ptr->found->nam, __LINE__);
+              abort();
+            }
+          printf("**DISASS[%ld]:%s(%s) ", ptr->time, ptr->found->nam, fmtnam[fmt]);
+          if (rd) printf("r%d[%lx] ", rd, ptr->rf_wdata);
+          if (reg1) printf("r%d[%lx] ", reg1, regs[reg1]);
+          if (reg2) printf("r%d[%lx] ", reg2, regs[reg2]);
+          if (imm && (fmt==fmt_S)) printf("@(%x) ", imm);
+          printf("\n");
           cpu = ptr->hartid;
           cmd = 0;
           exc_taken = 0;
@@ -352,10 +403,12 @@ int main(int argc, char **argv)
           fpdata = 0;
           verbosity = 0;
 	  addr = ptr->iaddr+4;
+          if (ptr->w_reg < 32)
+            regs[ptr->w_reg] = ptr->rf_wdata;
 	  switch(ptr->found->op)
 	    {
 	    case op_mul:
-	      data1 = lookahead(i+1, rd);
+	      data1 = ptr->rf_wdata;
               break;
 	    case op_mulh:
 	    case op_mulhu:
@@ -392,7 +445,10 @@ int main(int argc, char **argv)
 	    case op_csrrw:
 	    case op_csrrs:
 	    case op_csrrwi:
-	      addr = ptr->insn0 >> 20;
+	      addr = imm;
+              data1 = csr_table[imm];
+              data2 = regs[reg1];
+              csr_table[imm] = regs[reg1];
 	      switch(addr)
 		{
 		case CSR_MISA:
@@ -405,7 +461,6 @@ int main(int argc, char **argv)
 		  data1 = 0x0;
 		  break;
 		case CSR_MTVEC:
-		  data1 = 0x100;
 		  break;
 		case CSR_MSTATUS:
 		  data1 = 0x2000;
@@ -428,8 +483,8 @@ int main(int argc, char **argv)
 	    case op_sh:
 	    case op_sw:
 	      data1 = ptr->rs1_rdata;
-	      data2 = ptr->rs2_rdata;
-	      addr = ptr->rf_wdata;
+	      data2 = regs[reg2];
+	      addr = regs[reg1] + imm;
 	      break;
 	    case op_lb:
 	    case op_lbu:
@@ -438,7 +493,7 @@ int main(int argc, char **argv)
 	    case op_lhu:
 	    case op_lw:
 	    case op_lwu:
-	      addr = ptr->rs1_rdata + (ptr->insn0 >> 20);
+	      addr = ptr->rs1_rdata + imm;
 	      data1 = lookahead(i+1, rd);
 	      break;
 	    default:
@@ -461,6 +516,6 @@ int main(int argc, char **argv)
 				verbosity);
 	    }
         }
-  fprintf(stderr, "Normal end of execution logfile\n");
+  fprintf(stderr, "%s: Normal end of execution logfile\n", stem);
   l3riscv_done();
 }

@@ -496,12 +496,26 @@ record MachineCSR
   mbadaddr      :: regType
   mip           :: mip
 
-  mbase         :: regType      -- protection and translation
-  mbound        :: regType
-  mibase        :: regType
-  mibound       :: regType
-  mdbase        :: regType
-  mdbound       :: regType
+  pmpcfg0       :: regType      -- new csr protection registers (WIP)
+  pmpcfg1       :: regType
+  pmpcfg2       :: regType
+  pmpcfg3       :: regType
+  pmpaddr0      :: regType
+  pmpaddr1      :: regType
+  pmpaddr2      :: regType
+  pmpaddr3      :: regType
+  pmpaddr4      :: regType
+  pmpaddr5      :: regType
+  pmpaddr6      :: regType
+  pmpaddr7      :: regType
+  pmpaddr8      :: regType
+  pmpaddr9      :: regType
+  pmpaddrA      :: regType
+  pmpaddrB      :: regType
+  pmpaddrC      :: regType
+  pmpaddrD      :: regType
+  pmpaddrE      :: regType
+  pmpaddrF      :: regType
 
   mcycle        :: regType      -- timers and counters
   mtime         :: regType
@@ -1201,7 +1215,8 @@ bool is_CSR_defined(csr::creg) =
  or (csr >= 0x300 and csr <= 0x305 and csr != 0x301)
  or (csr >= 0x310 and csr <= 0x312)
  or (csr >= 0x340 and csr <= 0x344)
- or (csr >= 0x380 and csr <= 0x385)
+ or (csr >= 0x3A0 and csr <= 0x3A3)
+ or (csr >= 0x3B0 and csr <= 0x3BF)
  or (csr >= 0xF00 and csr <= 0xF02)
  or (csr >= 0xF10 and csr <= 0xF14)
  or (csr >= 0xF80 and csr <= 0xF82 and in32BitMode())
@@ -1312,12 +1327,26 @@ component CSRMap(csr::creg) :: regType
         case 0x344, true    => SignExtend(ip_to_32(c_MCSR(procID).&mip))
 
         -- machine protection and translation
-        case 0x380, _       => c_MCSR(procID).mbase
-        case 0x381, _       => c_MCSR(procID).mbound
-        case 0x382, _       => c_MCSR(procID).mibase
-        case 0x383, _       => c_MCSR(procID).mibound
-        case 0x384, _       => c_MCSR(procID).mdbase
-        case 0x385, _       => c_MCSR(procID).mdbound
+        case 0x3A0, _       => c_MCSR(procID).pmpcfg0
+        case 0x3A1, _       => c_MCSR(procID).pmpcfg1
+        case 0x3A2, _       => c_MCSR(procID).pmpcfg2
+        case 0x3A3, _       => c_MCSR(procID).pmpcfg3
+        case 0x3B0, _       => c_MCSR(procID).pmpaddr0
+        case 0x3B1, _       => c_MCSR(procID).pmpaddr1
+        case 0x3B2, _       => c_MCSR(procID).pmpaddr2
+        case 0x3B3, _       => c_MCSR(procID).pmpaddr3
+        case 0x3B4, _       => c_MCSR(procID).pmpaddr4
+        case 0x3B5, _       => c_MCSR(procID).pmpaddr5
+        case 0x3B6, _       => c_MCSR(procID).pmpaddr6
+        case 0x3B7, _       => c_MCSR(procID).pmpaddr7
+        case 0x3B8, _       => c_MCSR(procID).pmpaddr8
+        case 0x3B9, _       => c_MCSR(procID).pmpaddr9
+        case 0x3BA, _       => c_MCSR(procID).pmpaddrA
+        case 0x3BB, _       => c_MCSR(procID).pmpaddrB
+        case 0x3BC, _       => c_MCSR(procID).pmpaddrC
+        case 0x3BD, _       => c_MCSR(procID).pmpaddrD
+        case 0x3BE, _       => c_MCSR(procID).pmpaddrE
+        case 0x3BF, _       => c_MCSR(procID).pmpaddrF
 
         -- machine counter/timers
         case 0xF00, false   => c_MCSR(procID).mcycle
@@ -1445,12 +1474,26 @@ component CSRMap(csr::creg) :: regType
         case 0x344, true    => c_MCSR(procID).&mip      <- ip_of_32(value<31:0>)
 
         -- machine protection and translation
-        case 0x380, _       => c_MCSR(procID).mbase     <- value
-        case 0x381, _       => c_MCSR(procID).mbound    <- value
-        case 0x382, _       => c_MCSR(procID).mibase    <- value
-        case 0x383, _       => c_MCSR(procID).mibound   <- value
-        case 0x384, _       => c_MCSR(procID).mdbase    <- value
-        case 0x385, _       => c_MCSR(procID).mdbound   <- value
+        case 0x3A0, _       => c_MCSR(procID).pmpcfg0      <- value
+        case 0x3A1, _       => c_MCSR(procID).pmpcfg1      <- value
+        case 0x3A2, _       => c_MCSR(procID).pmpcfg2      <- value
+        case 0x3A3, _       => c_MCSR(procID).pmpcfg3      <- value
+        case 0x3B0, _       => c_MCSR(procID).pmpaddr0     <- value
+        case 0x3B1, _       => c_MCSR(procID).pmpaddr1     <- value
+        case 0x3B2, _       => c_MCSR(procID).pmpaddr2     <- value
+        case 0x3B3, _       => c_MCSR(procID).pmpaddr3     <- value
+        case 0x3B4, _       => c_MCSR(procID).pmpaddr4     <- value
+        case 0x3B5, _       => c_MCSR(procID).pmpaddr5     <- value
+        case 0x3B6, _       => c_MCSR(procID).pmpaddr6     <- value
+        case 0x3B7, _       => c_MCSR(procID).pmpaddr7     <- value
+        case 0x3B8, _       => c_MCSR(procID).pmpaddr8     <- value
+        case 0x3B9, _       => c_MCSR(procID).pmpaddr9     <- value
+        case 0x3BA, _       => c_MCSR(procID).pmpaddrA     <- value
+        case 0x3BB, _       => c_MCSR(procID).pmpaddrB     <- value
+        case 0x3BC, _       => c_MCSR(procID).pmpaddrC     <- value
+        case 0x3BD, _       => c_MCSR(procID).pmpaddrD     <- value
+        case 0x3BE, _       => c_MCSR(procID).pmpaddrE     <- value
+        case 0x3BF, _       => c_MCSR(procID).pmpaddrF     <- value
 
         -- machine counters/timers are MRO
 
@@ -1568,12 +1611,26 @@ string csrName(csr::creg) =
       case 0x344  => "mip"
 
       -- machine protection and translation
-      case 0x380  => "mbase"
-      case 0x381  => "mbound"
-      case 0x382  => "mibase"
-      case 0x383  => "mibound"
-      case 0x384  => "mdbase"
-      case 0x385  => "mdbound"
+      case 0x3A0       => "pmpcfg0"
+      case 0x3A1       => "pmpcfg1"
+      case 0x3A2       => "pmpcfg2"
+      case 0x3A3       => "pmpcfg3"
+      case 0x3B0       => "pmpaddr0"
+      case 0x3B1       => "pmpaddr1"
+      case 0x3B2       => "pmpaddr2"
+      case 0x3B3       => "pmpaddr3"
+      case 0x3B4       => "pmpaddr4"
+      case 0x3B5       => "pmpaddr5"
+      case 0x3B6       => "pmpaddr6"
+      case 0x3B7       => "pmpaddr7"
+      case 0x3B8       => "pmpaddr8"
+      case 0x3B9       => "pmpaddr9"
+      case 0x3BA       => "pmpaddrA"
+      case 0x3BB       => "pmpaddrB"
+      case 0x3BC       => "pmpaddrC"
+      case 0x3BD       => "pmpaddrD"
+      case 0x3BE       => "pmpaddrE"
+      case 0x3BF       => "pmpaddrF"
 
       -- machine counters/timers
       case 0xF00  => "mcycle"
