@@ -7,7 +7,9 @@ src/sml/riscv.sig
 src/sml/riscv.sml
 src/sml/riscv_ffi.h
 src/sml/riscv_rocketlog
-src/sml/rocket.dis
-src/sml/rocket.log
-src/sml/dis.log
-src/sml/test.log
+src/sml/*.dis
+src/sml/*.log
+src/sml/*.ref
+src/sml/*.obj
+src/sml/*.l3
+src/sml/failures

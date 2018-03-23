@@ -60,6 +60,12 @@ uint64_t l3riscv_mem_get_min_addr()
   return _l3r_get_mem_base();
 }
 
+uint64_t l3riscv_mem_get_tohost_addr()
+{
+  check_open();
+  return _l3r_get_tohost_base();
+}
+
 uint64_t l3riscv_mem_get_max_addr() {
   check_open();
 

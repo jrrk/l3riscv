@@ -20,6 +20,7 @@ void l3riscv_mem_load_elf();
    the loaded ELF file.
  */
 uint64_t l3riscv_mem_get_min_addr();
+uint64_t l3riscv_mem_get_tohost_addr();
 uint64_t l3riscv_mem_get_max_addr();
 uint32_t l3riscv_mem_read_32(uint64_t addr);
 

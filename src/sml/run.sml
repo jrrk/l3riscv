@@ -560,6 +560,7 @@ fun verifyInstr (cpu, m, exc, pc, addr, d1, d2, d3, fpd, v) =
 fun initModel () =
     let val exp_mem_base = _export "_l3r_get_mem_base" private : (unit -> Word64.word)        -> unit
       ; val exp_mem_size = _export "_l3r_get_mem_size" private : (unit -> Word64.word)        -> unit
+      ; val exp_tohost_base = _export "_l3r_get_tohost_base" private : (unit -> Word64.word)  -> unit
       ; val exp_load_elf = _export "_l3r_load_elf"     private : (unit -> Int64.int)        -> unit
       ; val exp_mem_read = _export "_l3r_read_mem"     private : (Word64.word -> Word64.word) -> unit
       ; val exp_ver_inst = _export "_l3r_verify_instr" private : ((Word64.word * Word32.word * Int32.int
@@ -569,6 +570,7 @@ fun initModel () =
                                                                  ) -> unit
       ;
     in  exp_mem_base (fn () => !mem_base_addr)
+      ; exp_tohost_base (fn () => Word64.fromInt (BitsN.toUInt (!riscv.htif_tohost_addr)))
       ; exp_mem_size (fn () => !mem_size)
       ; exp_load_elf (fn () =>
                          case OS.Process.getEnv verifier_exe_name of
