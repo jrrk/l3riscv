@@ -7,6 +7,9 @@
 #include <values.h>    // For Linux
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* This should be called before any other calls into l3riscv. */
 void l3riscv_init();
 
@@ -76,3 +79,6 @@ uint32_t l3riscv_verify(uint64_t cpu,
                         uint64_t data3,
                         uint64_t fpdata,
                         uint32_t verbosity);
+#ifdef __cplusplus
+};
+#endif
