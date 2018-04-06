@@ -288,6 +288,9 @@ construct ExceptionType
 , E_AMO_Misaligned
 , E_Store_AMO_Fault
 , E_Env_Call
+, E_Fetch_Page_Fault
+, E_Load_Page_Fault
+, E_Store_Page_Fault
 }
 
 exc_code excCode(e::ExceptionType) =
@@ -302,6 +305,9 @@ exc_code excCode(e::ExceptionType) =
       case E_Store_AMO_Fault    => 0x7
 
       case E_Env_Call           => 0x8
+      case E_Fetch_Page_Fault   => 0xc
+      case E_Load_Page_Fault    => 0xd
+      case E_Store_Page_Fault   => 0xf
     }
 
 ExceptionType excType(e::exc_code) =
@@ -316,6 +322,9 @@ ExceptionType excType(e::exc_code) =
       case 0x7 => E_Store_AMO_Fault
 
       case 0x8 => E_Env_Call
+      case 0xc => E_Fetch_Page_Fault
+      case 0xd => E_Load_Page_Fault
+      case 0xf => E_Store_Page_Fault
 
       case _   => #UNDEFINED("Unknown exception: " : [[e]::nat])
     }
@@ -332,6 +341,9 @@ string excName(e::ExceptionType) =
       case E_Store_AMO_Fault    => "FAULT_STORE_AMO"
 
       case E_Env_Call           => "EnvCall"
+      case E_Fetch_Page_Fault   => "FETCH_PAGE_FAULT"
+      case E_Load_Page_Fault    => "LOAD_PAGE_FAULT"
+      case E_Store_Page_Fault   => "STORE_PAGE_FAULT"
     }
 
 ---------------------------------------------------------------------------
@@ -398,7 +410,11 @@ word  status_to_32(v::dword) = [v<63>]::bits(1) : 0x0`2  : v<28:0>
 dword status_of_32(v::word)  = [v<31>]::bits(1) : 0x0`32 : v<30:0>
 
 register medeleg :: regType     -- Exception Trap Delegation
-{    11 : M_MEnvCall
+{    15 : M_Store_Page_Fault
+,    14 : M_E_Deleg_unused_14
+,    13 : M_Load_Page_Fault
+,    12 : M_Fetch_Page_Fault
+,    11 : M_MEnvCall     
 ,    10 : M_HEnvCall
 ,     9 : M_SEnvCall
 ,     8 : M_UEnvCall
